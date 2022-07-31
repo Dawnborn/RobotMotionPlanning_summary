@@ -191,6 +191,7 @@ Single query planners try to solve a single query as fast as possible, without t
 iteration, choose $q_{goal}$) \label{targetRRT}
 	\item find closest vertex in roadmap
 	\item extend this vertex towards target location
+		\subitem when with obstacles, extend as much as possible 
 	\item repeat steps until $q_{goal}$ is reached
 \end{enumerate}
 \textit{Note to point \ref{targetRRT}:} $q_{goal}$ is not chosen as target every time, because this would possibly lead the tree into an obstacle instead of exploring the free space.
