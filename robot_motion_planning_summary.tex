@@ -152,6 +152,9 @@ enough
 \includegraphics[width=\columnwidth]{PRM}
 \textbf{Drawbacks: } PRMs don't perform well when there are narrow passages.
 
+A relatively small number of milestones and local paths are sufficient to capture the connectivity of the free space.
+Checking sampled configurations and connections between samples for collision can be done efficiently
+
 \subsubsection{OBPRM - Obstacle-Based PRM}
 Obstacle-based PRMs are constructed by sampling only close to obstacles. During sampling, the first goal is to find a point that lies inside an obstacle. Then, another point is sampled at an arbitrary distance to the first point. Using step-wise approximation, a point sufficiently close to the obstacle border is searched.
 \includegraphics[width=\columnwidth]{OBPRM}
@@ -187,8 +190,7 @@ Single query planners try to solve a single query as fast as possible, without t
 \subsubsection{RRT - Rapidly Exploring Random Trees}
 \begin{enumerate}
 	\item pick $q_{start}$ as the first node
-	\item pick a random target location (every $n$-th
-iteration, choose $q_{goal}$) \label{targetRRT}
+	\item pick a random target location (every $n$-th iteration, choose $q_{goal}$)
 	\item find closest vertex in roadmap
 	\item extend this vertex towards target location
 		\subitem when with obstacles, extend as much as possible 
@@ -200,6 +202,18 @@ For faster execution, the tree can be grown from both $q_{start}$ and $q_{goal}$
 
 \includegraphics[width=0.8\columnwidth]{RRT}
 
+We can grow RRT with differential constraints.
+
+\subsubsection{RRT*-Re-Wiring for Gaining Optimality}
+PRM and RRT are not optimal.
+RRT*:
+\begin{enumerate}
+	\item For each new sample $x_n$ check its log $n$ neighborhood
+	\item if there are better paths from $x_i$ to $x_n$ pick that path
+\end{enumerate}
+RRT* is an asymptotically optimal sampling based algorithm
+	as the number of samples goes to infinity, an optimal path from $x_I$ to $x_G$
+
 
 \subsection{How To Sample}
 \begin{itemize}
@@ -209,22 +223,27 @@ For faster execution, the tree can be grown from both $q_{start}$ and $q_{goal}$
 	\item rotations: depends on representation, in axis-angle notation the axis and the angle are sampled separately
 \end{itemize}
 
-\subsection{Coverage, Connectivity, $\epsilon, \alpha, \beta$ - Expansiveness}
-A PRM has good coverage if the milestones are distributed in such a way that (almost) any point in the free C-space can be connected to one milestone via a straight line. Also, the connectivity should be good, meaning that every milestone should be reachable from any other milestone. Especially with narrow passages, the connectivity can be hard to capture.
+\subsection{Coverage, Connectivity, $\varepsilon, \alpha, \beta$ - Expansiveness}
+PRM works well only $\varepsilon, \alpha, \beta$ - Expansiveness
+
+A PRM has good coverage if the milestones are distributed in such a way that (almost) any point in the free C-space can be connected to one milestone via a straight line. 
+
+Also, the connectivity should be good, meaning that every milestone should be reachable from any other milestone. Especially with narrow passages, the connectivity can be hard to capture.
 
 \includegraphics[width=\columnwidth]{coverage}
 
-The coverage and connectivity are characterized by the expansiveness of the space (given by $\epsilon$, $\alpha$, $\beta$).
+The coverage and connectivity are characterized by the \textbf{Expansiveness} of the space (given by $\varepsilon$, $\alpha$, $\beta$).
 
-\textbf{Definition from Hsu's paper:} A free space $F$ is ($\alpha$, $\beta$, $\epsilon$)-expansive, if it satisfies these conditions: 
+\textbf{Definition from Hsu's paper:} A free space $F$ is ($\alpha$, $\beta$, $\varepsilon$)-expansive, if it satisfies these conditions: 
 \begin{enumerate}
-	\item $\mu (V(p))  \geq \epsilon , ~~ \forall p \in F$ \\
-	$\Rightarrow$ each point p must see at least a $\epsilon$ fraction of the free space F $\rightarrow$ F is $\epsilon$-good
+	\item $\varepsilon$-goodness: $\mu (V(p))  \geq \varepsilon , ~~ \forall p \in F$ \\
+	$\Rightarrow$ each point p must see at least a $\varepsilon$ fraction of the free space F $\rightarrow$ F is $\varepsilon$-good
 	\item $\beta-\mathrm{lookout}(S) = \{q\in S ~~|~~ \mu(V(q)\textbackslash S) \geq \beta \cdot \mu(F\textbackslash S)\} $ \\
-	$\Rightarrow$ for any $S \subseteq F$, the $\beta-\mathrm{lookout}(S)$ is defined as the subset of points $p$ that can see at least a $\beta$-fraction of the complementary space of $S$ ($\equiv F\textbackslash S$). $\alpha$ is then defined as the relative volume of these points $p$ to $S$: $\frac{\mu(\beta-\mathrm{lookout}(S))}{\mu(S)}$
+	$\Rightarrow$ for any $S \subseteq F$, the $\beta-\mathrm{lookout}(S)$ is defined as the subset of points $p$ that can see at least a $\beta$-fraction of the complementary space of $S$ ($\equiv F\textbackslash S$). 
+	\item $\alpha$ is then defined as the relative volume of these points $p$ to $S$: $\frac{\mu(\beta-\mathrm{lookout}(S))}{\mu(S)}$, satisfied by every subset $S$
 \end{enumerate}
 
-with $\epsilon, \alpha, \beta \in \ (0,1]$, $V(\cdot)$ as the set of visible points of a point and $\mu(\cdot)$ denoting the volume of a set of points.
+with $\varepsilon, \alpha, \beta \in \ (0,1]$, $V(\cdot)$ as the set of visible points of a point and $\mu(\cdot)$ denoting the volume of a set of points.
 
 ~\\
 \textbf{Burschka-Style}:
@@ -232,16 +251,38 @@ with $\epsilon, \alpha, \beta \in \ (0,1]$, $V(\cdot)$ as the set of visible poi
 	\item let $F$ be the free space (set of points); $\mu(G)$ the volume/ area of some set G; $reach(x)$ the space ($\subseteq F$) that can be seen from some point $x$; $reach(G)$ the space that can be seen from any point in a set $G$
 	\item find point $x \in F$ with smallest $\mu(reach(x))$
 	\item $S = reach(x)$
-	\item $\epsilon = \frac{\mu(S)}{\mu(F)}$
+	\item $\varepsilon$-goodness: $\varepsilon = \frac{\mu(S)}{\mu(F)}$ 
+		% \subitem any point can say more than $\epsilon$ ration of the whole area
 	\item choose some set $Z \subseteq S$ that can reach a lot and has an easy to calculate area
 	\item $\alpha = \frac{\mu(Z)}{\mu(S)}$
-	\item $\beta = \frac{\mu(reach(Z) \setminus S)}{\mu(F \setminus S)}$ (not really according to the definition, but best way to do it in the exam)
+	\item $\beta$-lookout $\beta = \frac{\mu(reach(Z) \setminus S)}{\mu(F \setminus S)}$ (not really according to the definition, but best way to do it in the exam)
 	\item the goal is to keep $\alpha$ and $\beta$ balanced
 \end{enumerate}
 
-Using these values, the number n of samples that is needed for a good connectivity can be calculated:
-\[ n= \frac{8 \ln (\frac{8}{\epsilon\alpha\gamma})}{\epsilon\alpha} + \frac{3}{\beta} \,, \] 
+\textbf{Uniform Sampling}: Using these values, the number n of samples that is needed for a good connectivity can be calculated:
+\[ n= \frac{8 \ln (\frac{8}{\varepsilon\alpha\gamma})}{\epsilon\alpha} + \frac{3}{\beta} \,, \] 
 where $1-\gamma$ measures the probability that the uniformly sampled milestones have the correct connectivity ($\gamma \in [0,1]$).
+
+\textbf{Linking Sequence}:$P_{n+1}$ is chosen from the lookout of the subset seen by $p, p_1, ..., p_n$.
+In an expansive space with large $\varepsilon,\alpha,\beta$ we can obtain a linking sequence that covers a lrge fraction of the free space, with high probability.
+
+Probability of good connectivity, coverage increases exponentially with the number of milestones (in an expansive space)
+	
+$\varepsilon,\alpha,\beta$ decreases, increases the number of milestones
+
+\subsection{Extensions}
+Accelerate the planner by automatically generating
+intermediate configurations to decompose the free
+space into expansive components.
+
+Use geometric transformations to increase the
+expansiveness of a free space, e.g., widening narrow
+passages.
+
+Integrate the new planner with other planner for
+multiple-query path planning problems.
+
+
 
 \subsection{Path and Map Smoothing}
 The paths obtained by random sampling techniques are not necessarily the most efficient paths. Path smoothing techniques are used to optimize the path for length, energy, distance to obstacles etc. 
